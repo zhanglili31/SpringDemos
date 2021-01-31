@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd">
+	<bean id="bean1" class="com.jlu.test1.Bean1"></bean>
+	<bean id="pointCut" class="com.jlu.test2.PointCut"></bean>
+	<bean id="bean2" class="com.jlu.test1.Bean2"></bean>
+	<bean id="bean3" class="com.jlu.test1.Bean3"></bean>
+	<bean id="bean4" class="com.jlu.test1.Bean4"></bean>
+	<context:component-scan base-package="com.jlu.test3"></context:component-scan>
+	<aop:aspectj-autoproxy></aop:aspectj-autoproxy><!-- 开启注解方式实现aop -->
+	<!-- 前置通知 -->
+	<aop:config> 
+		<aop:pointcut expression="execution(public void com.jlu.test2.PointCut.cutMethod(java.lang.String))" id="pointcut1"/>
+		<aop:advisor advice-ref="bean1" pointcut-ref="pointcut1"/>
+		<!--<aop:advisor advice-ref="bean2" pointcut-ref="pointcut1"/>   后置通知： 把注释和文字去掉放这里也可以  -->
+	</aop:config> 
+	<!-- 后置通知1-->
+	<aop:config>
+		<aop:pointcut expression="execution(public void com.jlu.test2.PointCut.cutMethod(java.lang.String))" id="pointcut2"/>
+		<aop:advisor advice-ref="bean2" pointcut-ref="pointcut2"/>  
+	</aop:config> 
+	<!-- 异常通知1 -->
+	<aop:config>
+		<aop:pointcut expression="execution(public String com.jlu.test2.PointCut.produceEX(java.lang.String,int))" id="pointcut3"/>
+		<aop:advisor advice-ref="bean3" pointcut-ref="pointcut3"/>
+	</aop:config>
+		<!-- 环绕通知1 -->
+	<aop:config>
+		<aop:pointcut expression="execution(public String com.jlu.test2.PointCut.produceEX(java.lang.String,int))" id="pointcut4"/>
+		<aop:advisor advice-ref="bean4" pointcut-ref="pointcut4" />  
+	</aop:config>  
+	<!-- 环绕通知2 -->
+	<aop:config>
+		<aop:pointcut expression="execution(public void com.jlu.test2.PointCut.cutMethod(String))" id="pointcut5"/>
+		<aop:advisor advice-ref="bean4" pointcut-ref="pointcut5" />  
+	</aop:config>
+	<!--  使用schema方式实现aop -->
+	<bean id="bean6" class="com.jlu.test1.Bean6"></bean>
+	<aop:config>
+		<aop:pointcut expression="execution(public void com.jlu.test2.PointCut.testSchema())" id="pointcut6"/>
+		<aop:aspect ref="bean6">
+				<!-- 连接线：连接 业务 addStudent  和  通知before -->
+		 	<aop:before method="before" pointcut-ref="pointcut6"/>
+		 	<!-- 连接线：连接 业务 addStudent  和  通知afterReturning -->
+		 	<aop:after-returning method="afterReturning" returning="returnValue" pointcut-ref="pointcut6"/>
+		 	
+		 	<aop:after-throwing method="whenException" pointcut-ref="pointcut6" throwing="e"/>
+		 	<!-- 环绕 -->
+		 	<aop:around method="around" pointcut-ref="pointcut6" />
+			
+		</aop:aspect>
+	</aop:config>
+
+</beans>

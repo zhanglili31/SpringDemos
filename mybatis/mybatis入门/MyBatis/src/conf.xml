@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<!-- 这一段时固定的 -->
+	<environments default="development">
+		<environment id="development">
+		<transactionManager type="JDBC"/>
+			<dataSource type="POOLED">
+				<!-- 配置数据库信息，需要自己写的 -->
+			<property name="driver" value="com.mysql.cj.jdbc.Driver"/>
+			<property name="url" value="jdbc:mysql://120.77.172.29:3306/mybatistest?&amp;useSSL=false&amp;serverTimezone=UTC&amp;allowPublicKeyRetrieval=true"/>
+			<property name="username" value="user1"/>
+			<property name="password" value="123456"/>
+		</dataSource>
+		</environment>
+	</environments>
+	<mappers>
+		<!-- 加载映射文件 -->
+		<mapper resource="com/jlu/test1/personMapper.xml"/>
+	</mappers>
+</configuration>

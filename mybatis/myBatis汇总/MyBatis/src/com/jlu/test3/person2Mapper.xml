@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jlu.test3.Person2Mapper">
+	<select id="selectAllPersonWithCard" resultType="com.jlu.test1.Person2" resultMap="map1">
+		select * from person,card where person.cardid=card.cardid
+	</select>
+	<resultMap type="com.jlu.test1.Person2" id="map1">
+		<id property="id" column="id"/>
+		<result property="c1" column="c1"/>
+		<result property="c2" column="c2"/>
+		<result property="sex" column="sex"/>
+		<result property="classid" column="classid"/>
+		<association property="card" javaType="com.jlu.test1.Card">
+			<id property="cardid" column="cardid"/>
+			<result property="info" column="info"/>
+			<result property="personid" column="personid"/> 
+		</association>
+	</resultMap>
+</mapper>

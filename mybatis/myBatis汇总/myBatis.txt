@@ -1,0 +1,887 @@
+日志：Log4j
+a.Log4j:	log4j.jar (mybatis.zip中lib中包含此jar)
+
+b.开启日志，conf.xml configuration标签下
+	<settings>
+		<!-- 开启日志，并指定使用的具体日志 -->
+		<setting name="logImpl" value="LOG4J"/>
+	</settings>
+如果不指定，Mybatis就会根据以下顺序 寻找日志
+SLF4J →Apache Commons Logging →Log4j 2 → Log4j →JDK logging
+
+c.编写配置日志输出文件
+log4j.properties，内容
+log4j.rootLogger=DEBUG, stdout
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%5p [%t] - %m%n
+
+日志级别：
+	DEBUG<INFO<WARN<ERROR
+如果设置为info，则只显示 info及以上级别的信息；
+建议：在开发时设置debug，在运行时设置为info或以上。
+可以通过日志信息，相信的阅读mybatis执行情况（ 观察mybatis实际执行sql语句 以及SQL中的参数 和返回结果）
+
+ mybatis:
+	ibatis:apache
+	2010 ibatis-> google colde ,Mybatis
+
+
+MyBatis可以简化JDBC操作，实现数据的持久化 。
+	ORM:Object Relational Mapping
+	    person对象   person表
+
+	ORM：概念 ，
+		Mybatis是ORM的一个实现/Hibernate 
+	orm可以是的开发人员  像操作对象一样 操作数据库表。
+
+
+开发mybatis程序从步骤：
+需要的jar：  
+mybatis核心jar包：mybatis-3.4.6.jar
+数据库的驱动  mysql-connector-java-8.0.15.jar
+1.配置mybatis
+conf.xml:配置数据库信息 和 需要加载的映射文件  放在src目录下
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<!-- 这一段时固定的 -->
+	<environments default="development">
+		<environment id="development">
+		<transactionManager type="JDBC"/>
+			<dataSource type="POOLED">
+				<!-- 配置数据库信息，需要自己写的 -->
+			<property name="driver" value="com.mysql.cj.jdbc.Driver"/>
+			<property name="url" value="jdbc:mysql://120.77.172.29:3306/mybatistest?&amp;useSSL=false&amp;serverTimezone=UTC&amp;allowPublicKeyRetrieval=true"/>
+			<property name="username" value="user1"/>
+			<property name="password" value="123456"/>
+		</dataSource>
+		</environment>
+	</environments>
+	<mappers>
+		<!-- 加载映射文件 -->
+		<mapper resource="com/jlu/test1/personMapper.xml"/>
+	</mappers>
+</configuration>
+表 - 类
+映射文件xxMapper.xml 
+personMapper.xml
+	注意：
+		*该文件放在类对应的包里面
+	    *或者其他的包里也可以
+		
+		
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jlu.test1.personMapper">
+	<select id="queryPersonById" resultType="com.jlu.test1.Person"  parameterType="int">
+		select * from person where  id = #{id} 
+	</select>
+</mapper>
+mybatis约定：
+在crud的标签下：
+输入参数parameterType输入参数parameterType 和 输出参数resultType ，在形式上都只能有一个
+如果输入参数 ：是简单类型（8个基本类型+String） 是可以使用任何占位符,#{xxxx}
+	           如果是对象类型，则必须是对象的属性 #{属性名}
+			   
+
+输出参数： 如果返回值类型是一个 对象（如Student），则无论返回一个、还是多个，
+		   再resultType都写成org.lanqiao.entity.Student
+		   即 resultType="org.lanqiao.entity.Student"
+			代码中使用相应list类型获取返回值
+			
+数据库表和java类的映射：
+1表名和类名一致
+2属性名和列名一致
+
+注意事项：
+a如果使用的 事务方式为 jdbc,则需要 手工commit提交，即session.commit();
+b所有的标签 <select> <update>等 ，都必须有sql语句，但是sql参数值可选
+select* from student  where stuno = #{xx}
+java代码中的 sql有参数：session.insert(statement, 参数值 );
+java代码中的 sql没参数：session.insert(statement);
+所有的crud除了查找，在conf.xml中<transactionManager type="JDBC"/> 都必须执行session.commit();否则数据不会更新到数据库
+
+测试类：
+session.selectOne("需要查询的SQL的namespace.id","SQL的参数值");
+
+package com.jlu.test1;
+
+import java.io.IOException;
+import java.io.Reader;
+
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+
+public class TestMyBatis {
+	public static void main(String[] args) throws IOException {
+		//加载MyBatis配置文件（为了访问数据库）
+		Reader reader = Resources.getResourceAsReader("conf.xml") ;
+		SqlSessionFactory sessionFactory = new SqlSessionFactoryBuilder().build(reader) ;
+		//session - connection
+		
+		
+		SqlSession session = sessionFactory.openSession() ;
+		String statement = "com.jlu.test1.personMapper.queryPersonById" ;
+		Person person = session.selectOne( statement,1 ) ;
+		System.out.println(person);
+		session.close(); 
+		
+	}
+}
+备注：
+使用mysql出的错误
+Cause: org.xml.sax.SAXParseException; lineNumber: 11; columnNumber: 106; 对实体 "useSSL" 的引用必须以 ';' 分隔符
+
+在mybatis-config.xml中：
+<!-- 设置数据库连接参数 -->
+<property name="url" value="jdbc:mysql://localhost:3306/mybatis?useUnicode=true&amp;characterEncoding=utf8" />
+即要将&  转义 &amp; 才能使用
+<property name="url" value="jdbc:mysql://120.77.172.29:3306/mybatistest?&amp;useSSL=false&amp;serverTimezone=UTC&amp;allowPublicKeyRetrieval=true"/>
+但是使用db.properties的方式：不需要转义
+url=jdbc:mysql://120.77.172.29:3306/mybatistest?&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+
+<!-- 
+1 mybatis sql语句不需要加;符号作为结尾，但是数据库里需要加
+2 对于java数据，严格区分大小写，数据库的数据不区分大小写
+ -->
+	<insert id="insertPerson" parameterType="com.jlu.test1.Person">
+			<!--insert into person(id,c1,c2) value(${id},'${c1}','${c2}')-->
+			insert into person(id,c1,c2)value(#{id},#{c1},#{c2})
+		<!-- insert into person(id,c1,c2) value(${id},${c1},${c2}):
+		 	insert into person(id,c1,c2) value(3,c1 str,s2 str2)
+		 	这样不对，数据库对字符串应该加入单引号
+		 	解决：
+		 		1 #{类的属性}   //自动加入单引号(这种对字符串自动加单引号的特点不会对其他的数据类型生效)
+		 		2 '${类的属性}' //手动添加单引号 (对于简单类型(八种数据类型和String)里面的括号里必须写的是value)
+		 					 //${类的属性}这种引用方式适用于模糊查询
+		  -->
+	</insert>
+
+
+
+
+
+
+修改开发环境：两种方式：
+1 //可以通过build的第二参数 指定数据库环境
+	SqlSessionFactory sessionFacotry = new SqlSessionFactoryBuilder().build(reader,"development") ;
+2：<!-- 通过environments的default值 和  environment的 id 来指定 MyBatis运行时的数据库环境-->
+	<environments default="development">
+	还要在conf.xml 添加对应的环境 在configuration标签下
+	configuration标签下的属性说明：
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<!-- 通过environments的default值 和  environment的 id 来指定 MyBatis运行时的数据库环境-->
+	<environments default="development">
+		<!-- 开发环境（自己的计算机） -->
+		<environment id="development">
+		
+		
+			<!-- 事务提交方式：
+				JDBC:利用JDBC方式处理事务（commit  rollback  close）
+				MANAGED：将事务交由 其他组件去托管（spring ,jobss）,默认 会关闭连接。
+				property name="closeConnection" value="false"  设置参数使得不关闭连接
+			<transactionManager type="MANAGED"/>
+				<property name="closeConnection" value="false"/>
+			 -->
+			   <transactionManager type="JDBC" />
+				<!-- 数据源类型：
+						UNPOOLED:传统的JDBC模式（每次访问数据库，均需要 打开、关闭等数据库操作，但是 打开、关闭数据库是比较消耗性能的）
+						POOLED：使用数据库连接池
+						JNDI：从tomcat中获取一个内置的数据库连接池 （数据库连接池-数据源  ）
+				 -->
+				 
+				<dataSource type="POOLED">
+				
+				
+					<!-- 配置数据库信息 -->
+					<property name="driver" value="oracle.jdbc.OracleDriver"/>
+					<property name="url" value="jdbc:oracle:thin:@127.0.0.1:1521:ORCL"/>
+					<property name="username" value="scott"/>
+					<property name="password" value="tiger"/>
+				</dataSource>
+		</environment>
+		
+		<!-- 真正的项目应该在   发布的那台计算机上运行 -->
+		<environment id="shishi">
+			<transactionManager type="JDBC"/>
+				<dataSource type="POOLED">
+				<!-- 配置数据库信息 -->
+				<property name="driver" value="oracle.jdbc.OracleDriver"/>
+				<property name="url" value="jdbc:oracle:thin:@192.168.1.183:1521:ORCL"/>
+				<property name="username" value="scott"/>
+				<property name="password" value="tiger"/>
+			</dataSource>
+		</environment>
+		
+		
+		<!--  -->
+		<environment id="test">
+			<transactionManager type="JDBC"/>
+				<dataSource type="POOLED">
+				<!-- 配置数据库信息 -->
+				<property name="driver" value="oracle.jdbc.OracleDriver"/>
+				<property name="url" value="jdbc:oracle:thin:@192.168.1.111:1521:ORCL"/>
+				<property name="username" value="scott"/>
+				<property name="password" value="tiger"/>
+			</dataSource>
+		</environment>
+	</environments>
+	
+	<mappers>
+		<!-- 加载映射文件 -->
+		<mapper resource="org/lanqiao/entity/studentMapper.xml"/>
+	</mappers>
+</configuration>
+错误：java.lang.NoClassDefFoundError
+原因：namespace的名字和接口的全名不一致：
+二、mapper动态代理方式的crud （MyBatis接口开发）:
+原则：约定优于配置 
+
+具体实现的步骤：
+1.基础环境：mybatis.jar/ojdbc.jar、conf.xml、mapper.xml
+2.（不同之处）
+	约定的目标： 省略掉statement,即根据约定 直接可以定位出SQL语句
+
+  a.接口，接口中的方法必须遵循以下约定：
+		 *1.方法名和mapper.xml文件中标签的id值相同
+		 * 2.方法的 输入参数 和mapper.xml文件中标签的 parameterType类型一致 (如果mapper.xml的标签中没有 parameterType，则说明方法没有输入参数)
+		 * 3.方法的返回值  和mapper.xml文件中标签的 resultType类型一致 （无论查询结果是一个 还是多个（student、List<Student>），在mapper.xml标签中的resultType中只写 一个（Student）；如果没有resultType，则说明方法的返回值为void）
+
+除了以上约定，要实现 接口中的方法  和  Mapper.xml中SQL标签一一对应，还需要以下1点：
+	namespace的值 ，就是  接口的全类名（ 接口 - mapper.xml 一一对应）
+	一定要接口的全名一定要和那么namespace完全一致
+	com.jlu.test2.PersonMapper
+	<mapper namespace="com.jlu.test2.PersonMapper">
+	
+匹配的过程：（约定的过程）
+1.根据 接口名 找到 mapper.xml文件（根据的是namespace=接口全类名）
+2.根据 接口的方法名 找到 mapper.xml文件中的SQL标签 （方法名=SQL标签Id值）
+
+以上2点可以保证： 当我们调用接口中的方法时，
+程序能自动定位到 某一个Mapper.xml文件中的sqL标签
+
+
+习惯：SQL映射文件（mapper.xml） 和 接口放在同一个包中 （注意修改conf.xml中加载mapper.xml文件的路径）
+以上，可以通过接口的方法->SQL语句
+
+执行：
+		Reader reader = Resources.getResourceAsReader("conf.xml") ;
+		SqlSessionFactory sessionFactory = new SqlSessionFactoryBuilder().build(reader) ;
+		//session - connection
+		SqlSession session = sessionFactory.openSession();
+		StudentMapper studentMapper = session.getMapper(StudentMapper.class) ;//这是接口的class对象
+		studentMapper.方法();
+		StudentMapper studentMapper = session.getMapper( StudentMapper.class) ;
+		List<Student> students = studentMapper.queryAllStudents() ;//接口的方法->SQL
+
+通过session对象获取接口（session.getMapper(接口.class);），再调用该接口中的方法，程序会自动执行该方法对应的SQL。
+
+
+
+优化
+1.可以将配置信息 单独放入 db.properties文件中，然后再动态引入	
+ db.properties： 所在目录：src  new->file->db.properties
+	k=v
+例子：
+driver=oracle.jdbc.OracleDriver
+url=jdbc:oracle:thin:@127.0.0.1:1521:ORCL
+username=scott
+password=tiger
+
+conf.xml
+<configuration>这个标签下：
+	<properties  resource="db.properties"/>
+引入之后，使用${key}
+
+2.MyBatis全局参数
+在conf.xml中设置 configuration 标签下
+	<!-- 
+	<settings>
+			<setting name="cacheEnabled" value="false"  />
+			<setting name="lazyLoadingEnabled" value="false"  />
+	</settings>
+ 	-->
+
+3.别名 conf.xml
+a.设置单个别名
+b.批量设置别名
+	<typeAliases>
+		<!-- 单个别名 （别名 忽略大小写） -->
+		<!-- <typeAlias type="org.lanqiao.entity.Student" alias="student"/> -->
+		<!--  批量定义别名  （别名 忽略大小写），以下会自动将该包中的所有类 批量定义别名： 别名就是类名（不带包名，忽略大小写）   -->
+		<package name="org.lanqiao.entity"/>
+	</typeAliases>
+除了自定义别名外，MyBatis还内置了一些常见类的别名。
+
+
+
+
+
+
+错误：org.xml.sax.SAXParseException; lineNumber: 43; columnNumber: 17; 元素类型为 "configuration" 的内容必须匹配 "(properties?,settings?,typeAliases?,typeHandlers?,objectFactory?,objectWrapperFactory?,reflectorFactory?,plugins?,environments?,databaseIdProvider?,mappers?)"。
+这里必须严格遵守configuration标签里面元素的顺序。
+解决：把typeHandlers放到setting后面  因为没有typeAliases
+解决：<resultMap type="erson" id="personResult">修改为<resultMap type="com.jlu.test1.Person" id="personResult">
+	这里的type是类全名
+
+错误；Error parsing SQL Mapper Configuration. Cause: org.apache.ibatis.builder.BuilderException: Error resolving JdbcType. Cause: java.lang.IllegalArgumentException: No enum constant org.apache.ibatis.type.JdbcType.int
+解决：int Integer 修改为INTEGER
+Cause: org.apache.ibatis.executor.ExecutorException: No constructor found in com.jlu.test1.Person matching [java.lang.Integer, java.lang.String, java.lang.String, java.lang.Integer]
+解决：在实体类中添加默认构造函数
+你用的是mybatis,可以看下mybatis的数据文档怎么处理类型转换, 数据库数据类型和java数据类型的映射表,举个例子数据库中的date类型会被转成java.sql.Date, 而一般我们用的是java.util.date,这时就会出现上边的问题.
+解决方法: 1.去掉所有带参数的构造函数
+2.保留带参数的构造函数,加上无参的构造函数.
+因为mybatis就不希望用你的构造函数,这样它没法转换...
+类型处理器（类型转换器）
+1.MyBatis自带一些常见的类型处理器
+	int  - number
+
+2.自定义MyBatis类型处理器
+
+	java -数据库(jdbc类型)
+示例：
+实体类Student :  boolean   stuSex  	
+			true:男
+			false：女
+
+表student：	number  stuSex
+			1:男
+			0：女
+自定义类型转换器（boolean -number）步骤：
+a.创建转换器：需要实现TypeHandler接口
+	通过阅读源码发现，此接口有一个实现类 BaseTypeHandler ，因此 要实现转换器有2种选择：
+	i.实现接口TypeHandler接口
+	ii.继承BaseTypeHandler
+	package org.lanqiao.converter;
+
+import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.apache.ibatis.type.BaseTypeHandler;
+import org.apache.ibatis.type.JdbcType;
+
+//BaseTypeHandler<java类型>
+public class BooleanAndIntConverter extends BaseTypeHandler<Boolean>{
+
+	//java(boolean)-DB(number)
+	/*
+	 * ps:PreparedStatement对象
+	 * i：PreparedStatement对象操作参数的位置
+	 * parameter:java值
+	 * jdbcType：jdbc操作的数据库类型
+	 */
+	@Override
+	public void setNonNullParameter(PreparedStatement ps, int i, Boolean parameter, JdbcType jdbcType)
+			throws SQLException {
+			if(parameter) {
+				//1
+				ps.setInt(i, 1); 
+			}else {
+//				0
+				ps.setInt(i, 0); 
+			}
+	}
+
+	//db(number)->java(boolean)
+	@Override
+	public Boolean getNullableResult(ResultSet rs, String columnName) throws SQLException {
+		int sexNum = rs.getInt(columnName) ;//rs.getInt("stuno") ;
+//		if(sexNum == 1)
+//		
+//			return true;
+//		else {
+//			return false ;
+//		}
+		return sexNum == 1?true:false ;
+	}
+
+	@Override
+	public Boolean getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
+		int sexNum = rs.getInt(columnIndex) ;//rs.getInt(1)
+		return sexNum == 1?true:false ;
+	}
+	@Override
+	public Boolean getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
+		int sexNum = cs.getInt(columnIndex) ;//rs.getInt(1)
+		return sexNum == 1?true:false ;
+	}
+}
+
+	
+b.配置conf.xml configuration标签下：
+	<typeHandlers>
+		<typeHandler handler="org.lanqiao.converter.BooleanAndIntConverter" javaType="Boolean" jdbcType="INTEGER" />
+	</typeHandlers>
+	
+使用：在 studentMapper.xml mapper标签下：
+1  resultType <result property="stuSex"  column="stusex"  javaType="boolean" jdbcType="INTEGER"/>
+2  另外：<update id="updatePersonByIdWithConveter" parameterType="com.jlu.test1.Person" >
+		update person set c1=#{c1},c2=#{c2},sex=#{sex ,javaType=boolean ,jdbcType=INTEGER} where id=#{id}
+	</update>
+<!-- 查询：使用了类型转换器
+	1如果 类中属性 和表中的字段 类型能够合理识别 （String-varchar2），则可以使用resultType;否则(boolean-number) 使用resultMap
+	2如果 类中属性名 和表中的字段名能够合理识别 （stuNo -stuno）则可以使用resultType;否则(id-stuno) 使用resultMap
+	 -->
+	
+	<select id="queryStudentByStunoWithConverter" 	parameterType="int"  	
+	resultMap="studentResult" >
+		select * from student where stuno = #{stuno}
+	</select>
+	<resultMap type="student" id="studentResult">
+			<!-- 分为主键id 和非主键 result-->
+			<id property="stuNo"  column="stuno"  />
+			<result property="stuName"  column="stuname" />
+			<result property="stuAge"  column="stuage" />
+			<result property="graName"  column="graname" />
+			<!--  类型装换-- >
+			<result property="stuSex"  column="stusex"  javaType="boolean" jdbcType="INTEGER"/>
+	</resultMap>
+	
+	<!-- 带转换器的增加 -->
+	<insert id="addStudentWithConverter" parameterType="student" >
+		insert into student(stuno,stuname,stuage,graname,stusex) values(#{stuNo},#{stuName},#{stuAge},#{graName} ,#{stuSex ,javaType=boolean  ,jdbcType=INTEGER   } ) 
+	</insert>
+	
+需要注意的问题：  INTEGER
+
+insert into student(stuno,stuname,stuage,graname,stusex) values(#{stuNo},#{stuName},#{stuAge},#{graName} ,#{stuSex ,javaType=boolean  ,jdbcType=INTEGER   } ) 
+	
+注意#{stuNo} 中存放的是 对象属性值，需要严格区分大小写。
+
+resultMap可以实现2个功能：
+1.类型转换
+2.属性-字段的映射关系
+<!--  后续通过  namespace.id-->
+	<!--parameterType:输入参数的类型
+	resultType：查询返回结果值的类型  ，返回类型  -->
+	
+	<select id="queryStudentByStuno" 	parameterType="int"  	resultMap="studentMapping" >
+		select * from student where stuno = #{stuno}
+	</select>
+	
+	<resultMap type="student" id="studentMapping">
+			<!-- 分为主键id 和非主键 result-->
+			<id property="id"  column="stuno"  />
+			<result property="stuName"  column="stuname" />
+			<result property="stuAge"  column="stuage" />
+			<result property="graName"  column="graname" />
+			<result property="stuSex"  column="stusex"  javaType="boolean" jdbcType="INTEGER"/>	
+	</resultMap>
+
+
+
+<select id="queryStudentByStuno" 	parameterType="int"  	resultMap="studentMapping" >
+		select * from student where stuno = #{stuno}
+	</select>
+	
+	<resultMap type="student" id="studentMapping">
+			<!-- 分为主键id 和非主键 result-->
+			<id property="id"  column="stuno"  />
+			<result property="stuName"  column="stuname" />
+			<result property="stuAge"  column="stuage" />
+			<result property="graName"  column="graname" />
+			<result property="stuSex"  column="stusex"  javaType="boolean" jdbcType="INTEGER"/>
+	
+	
+	</resultMap>
+	
+没用过：待实验	
+3.别名 conf.xml
+a.设置单个别名
+b.批量设置别名
+	<typeAliases>
+		<!-- 单个别名 （别名 忽略大小写） -->
+		<!-- <typeAlias type="org.lanqiao.entity.Student" alias="student"/> -->
+		<!--  批量定义别名  （别名 忽略大小写），以下会自动将该包中的所有类 批量定义别名： 别名就是类名（不带包名，忽略大小写）   -->
+		<package name="org.lanqiao.entity"/>
+	</typeAliases>
+除了自定义别名外，MyBatis还内置了一些常见类的别名。
+<!-- 设置单个/多个别名 -->
+	<typeAliases>
+		<!-- 单个别名 （别名 忽略大小写） -->
+		<!-- <typeAlias type="org.lanqiao.entity.Student" alias="student"/> -->
+		<!--  批量定义别名  （别名 忽略大小写），以下会自动将该包中的所有类 批量定义别名： 别名就是类名（不带包名，忽略大小写）   -->
+		<package name="org.lanqiao.entity"/>
+	</typeAliases>
+
+接下类是动态sql 和输出结果hashMap  hashmap+result
+
+
+
+
+
+
+
+输出参数resultType
+1.简单类型（8个基本+String）
+2.输出参数为实体对象类型
+3.输出参数为实体对象类型的集合 ：虽然输出类型为集合，但是resultType依然写 集合的元素类型（resyltType="Student"）
+4.输出参数类型为HashMap
+	--HashMap本身是一个集合，可以存放多个元素，
+	  但是根据提示发现  返回值为HashMap时  ，查询的结果只能是1个学生（no,name）；
+-->结论：一个HashMap 对应一个学生的多个元素（多个属性）  【一个map，一个学生】
+多个学生使用list，元素是hashmap
+二维数组
+{
+	{1,zs,23,xa},    -一个HashMap对象
+	{2,ls,24,bj}, 
+	{3,ww,25,tj}
+}
+
+
+resultType
+resultMap:实体类的属性、数据表的字段： 类型、名字不同时（stuno,id）
+注意：当属性名 和字段名 不一致时，除了使用resultMap以外，还可以使用resultType+HashMap:
+student 是返回的类型
+a.resultMap
+	<resultMap type="student" id="queryStudentByIdMap">
+			<!-- 指定类中的属性 和 表中的字段 对应关系 -->
+			<id property="stuNo"  column="id" />
+			<result property="stuName" column="name" />
+	</resultMap>
+	
+b.resultType+HashMap
+select  表的字段名 "类的属性名" from... 来制定字段名 和属性名的对应关系
+	<select id="queryStudentByIdWithHashMap" 	 parameterType="int"	resultType="student" >
+		select id "stuNo",name "stuName" from student where id = #{id}
+	</select>
+	
+注意:  如果如果10个字段，但发现 某一个字段结果始终为默认值（0，0.0，null），则可能是 表的字段  和 类的属性名字写错。
+
+
+动态sql：
+//查询全部
+String statement = "select stuno,stuname from student";
+
+//根据年龄查询学生
+	
+String statement = "select stuno,stuname from student where stuage = #{stuage}"; 
+
+
+//根据姓名和年龄查询学生
+
+
+String statement = "select stuno,stuname from student where stuage = #{stuage} and stuage = #{stuage} "; 
+
+select stuno,stuname from student where  stuname = #{stuName}and  stuage = #{stuAge}
+
+
+
+
+
+select stuno,stuname,stuage from student <where> and stuname = #{stuName}  and  stuage = #{stuAge}
+
+<where>会自动处理第一个<if>标签中的 and，但不会处理之后<if>中的and
+
+
+<!-- 
+	<select id="queryStuByNOrAWishSQLTag" 	 parameterType="student"	resultType="student" >
+		select stuno,stuname,stuage from student where 1=1
+		<if test="student有stuname属性 且不为null"> 
+		<if test="stuName !=null and stuName!=''  "> 
+			and stuname = #{stuName}
+		</if>
+		<if test="stuAge !=null and stuAge!=0  "> 
+			 and  stuage = #{stuAge}
+		</if>
+	</select>
+	-->
+
+<foreach>
+<!-- 将多个元素值 放入对象的属性中 使用in和not in  -->
+	<select id="queryStudentsWithNosInGrade"  parameterType="grade" resultType="student">
+	  	select * from student 
+	  	<where>
+	  		 <if test="stuNos!=null and stuNos.size>0">
+	  		 	<foreach collection="stuNos" open=" and  stuno in (" close=")" 
+	  		 		item="stuNo" separator=",">   
+	  		 		#{stuNo}
+	  		 	</foreach>
+	  		 </if>
+	  	
+	  	</where>
+	
+	</select>
+查询学号为1、2、53的学生信息
+
+
+ids = {1,2,53};
+
+select stuno,stuname from student  where stuno in(1,2,53) 
+
+
+<foreach>迭代的类型：数组、对象数组、集合、属性(Grade类： List<Integer> ids)
+<!-- 将多个元素值 放入数组中 int[] stuNos = {1,2,53} -->
+	<select id="queryStudentsWithArray"  parameterType="int[]" resultType="student">
+	  	select * from student 
+	  	<where>
+	  		 <if test="array!=null and array.length">
+	  		 	<foreach collection="array" open=" and  stuno in (" close=")" 
+	  		 		item="stuNo" separator=",">   
+	  		 		#{stuNo}
+	  		 	</foreach>
+	  		 </if>
+	  	
+	  	</where>
+	
+	</select>
+
+属性(Grade类： List<Integer> ids)
+
+select * from student 
+open:
+select * from student and  stuno in (
+item:
+select * from student and  stuno in (1253
+close:
+select * from student and  stuno in (1,2,53)
+
+
+
+简单类型的数组:
+无论编写代码时，传递的是什么参数名(stuNos)，在mapper.xml中 必须用array代替该数组
+
+
+集合：
+无论编写代码时，传递的是什么参数名(stuNos)，在mapper.xml中 必须用list代替该数组
+
+
+对象数组：
+Student[] students = {student0,student1,student2}  每个studentx包含一个学号属性
+注意的几点：
+	parameterType="Object[]" 
+	 	<foreach collection="array" open=" and  stuno in (" close=")" 
+	  		 		item="student" separator=",">   
+	  		 		#{student.stuNo}
+	  	</foreach>
+
+
+
+SQL片段：
+	java：方法
+	数据库：存储过程、存储函数
+	Mybatis :SQL片段 
+
+a.提取相似代码
+<sql id="objectArrayStunos">
+		<where>
+	  		 <if test="array!=null and array.length>0">
+	  		 	<foreach collection="array" open=" and  stuno in (" close=")" 
+	  		 		item="student" separator=",">   
+	  		 		#{student.stuNo}
+	  		 	</foreach>
+	  		 </if>
+	  	</where>
+</sql>
+b.引用
+<select id="queryStudentsWithObjectArray"  parameterType="Object[]" resultType="student">
+	  	select * from student 
+	  	<!--如果sql片段和  引用处不在同一个文件中，则需要 在refid 引用时  加上namespace:   namespace.id
+	   <include refid="org.lanqiao.mapper.abcMapper.objectArrayStunos"></include> -->
+	   <include refid="objectArrayStunos"></include>
+</select>
+	
+
+关联查询：
+一对一:
+a.业务扩展类
+		核心：用resultType指定类的属性 包含 多表查询的所有字段
+	
+b.resultMap
+	i.通过 属性成员 将2个类建立起联系
+	2.
+<resultMap type="student" id="student_card_map">
+			<!-- 学生的信息 -->
+			<id  property="stuNo" column="stuNo"/>
+			<result property="stuName" column="stuName" />
+			<result property="stuAge" column="stuAge" />
+			<!-- 一对一时，对象成员使用 association映射;javaType指定该属性的类型-->
+			<association property="card" javaType="StudentCard" >
+					<id property="cardId" column="cardId"/>
+					<result property="cardInfo" column="cardInfo"/>
+			</association>
+			
+	</resultMap>
+	<select id="selectAllPersonWithCard" resultType="com.jlu.test1.Person2" resultMap="map1">
+		select * from person,card where person.cardid=card.cardid
+	</select>
+	我自己的配置
+	<resultMap type="com.jlu.test1.Person2" id="map1">
+		<id property="id" column="id"/>
+		<result property="c1" column="c1"/>
+		<result property="c2" column="c2"/>
+		<result property="sex" column="sex"/>
+		<result property="classid" column="classid"/>
+		<association property="card" javaType="com.jlu.test1.Card">
+			<id property="cardid" column="cardid"/>
+			<result property="info" column="info"/>
+			<result property="personid" column="personid"/> 
+		</association>
+	</resultMap>
+
+一对一：association
+一对多：collection
+错误：
+Cause: org.apache.ibatis.builder.BuilderException: Error creating document instance.  Cause: org.xml.sax.SAXParseException; lineNumber: 45; columnNumber: 17; 元素类型为 "configuration" 的内容必须匹配 "(properties?,settings?,typeAliases?,typeHandlers?,objectFactory?,objectWrapperFactory?,reflectorFactory?,plugins?,environments?,databaseIdProvider?,mappers?)"。
+	<mappers>
+		<!-- 加载映射文件 -->
+		<mapper resource="com/jlu/test2/personMapper.xml"/>
+	</mappers>
+	<mappers>
+		<mapper resource="com/jlu/test3/person2Mapper.xml"/>
+	</mappers>
+错误的原因：只能有一个Mappers
+修改：
+<mappers>
+		<!-- 加载映射文件 -->
+		<mapper resource="com/jlu/test2/personMapper.xml"/>
+		<mapper resource="com/jlu/test3/person2Mapper.xml"/>
+	</mappers>
+	
+
+
+
+
+
+
+一对多：
+ 一个班级对应多个学生：
+实现步骤：
+	编写一个业务类 里面包含一对多的对应得属性集合  以及默认构造函数，属性构造函数，setter and getter
+	public class MyClass {
+	int classId;
+	String classInfo;
+	List<Person> personList;
+	}
+	配置：
+	配置：
+<select id="selectPersonByClass"  resultMap="map1" resultType="HashMap">
+		select * from myclass,person where person.classid=myclass.classid
+	</select>
+	<resultMap type="com.jlu.test1.MyClass" id="map1">
+		<id property="classId" column="classid"/>
+		<result property="classInfo" column="classinfo"/>
+		<collection property="personList" ofType="com.jlu.test1.Person">
+			<id property="id" column="id"/>
+			<result property="c1" column="c1"/>
+			<result property="c2" column="c2"/>
+			<result property="sex" column="sex"/>
+			<result property="classid" column="classid"/>
+			<result property="cardid" column="cardid"/>
+		</collection>
+	</resultMap>
+
+错误：
+ Could not resolve type alias 'MyClass'.  Cause: java.lang.ClassNotFoundException: Cannot find class: MyClass
+		<resultMap type="MyClass" id="map1">
+	解决：<resultMap type="com.jlu.test1.MyClass" id="map1">
+
+
+延迟加载（懒加载）：
+一对一、一对多、多对一、多对多
+一对多：班级-学生 ，
+如果不采用延迟加载  （立即加载），查询时会将 一 和多 都查询，班级、班级中的所有学生。
+如果想要  暂时只查询1的一方，  而多的一方 先不查询 而是在需要的时候再去查询 -->延迟加载
+
+
+一对一：学生、学生证
+
+
+mybatis中使用延迟加载，需要先配置：
+	<settings>
+		<!-- 开启延迟加载 -->
+		<setting name="lazyLoadingEnabled" value="true"/>
+		
+		<!-- 关闭立即加载 -->
+		<setting name="aggressiveLazyLoading" value="false"/>
+	</settings>
+
+如果增加了mapper.xml ,要修改conf.xml配置文件（将新增的mapper.xml加载进去）
+
+通过debug可以发现， 如果程序只需要学生，则只向数据库发送了查询学生的SQL；
+当我们后续 需要用到学生证的时候，再第二次发送 查询学生证的SQL。
+
+
+一对多：和一对一的延迟加载配置方法相同
+
+
+
+延迟加载的步骤：先查班级，按需查询学生
+1.开启延迟加载conf.xml配置settings
+2.配置mapper.xml
+	写2个Mapper:
+	班级mapper.xml
+		<select id="queryClassAndStudents"   resultMap="class_student_lazyLoad_map">
+		
+			select  c.* from studentclass c
+		</select>		
+
+	<resultMap type="studentClass" id="class_student_lazyLoad_map">
+			<!-- 因为 type的主类是班级，因此先配置班级的信息-->
+			<id  property="classId" column="classId"/>
+			<result  property="className" column="className"/>
+			<!-- 配置成员属性学生，一对多;属性类型：javaType，属性的元素类型ofType -->
+			<!-- 2222222再查班级对应的学生 -->
+			<collection property="students" ofType="student" select="org.lanqiao.mapper.StudentMapper.queryStudentsByClassId" column="classid">
+
+			</collection>
+	</resultMap>
+
+		即查询 学生的sql是通过 select属性指定，并且通过column指定外键
+	学生mapper.xml
+	<!-- 一对多,延迟加载需要的： 查询班级中的所有学生 -->
+	<select id="queryStudentsByClassId" parameterType="int" resultType="student">
+		select * from student where classId = #{classId}
+	</select>
+
+
+
+
+<select id="queryStudentWithOO2LazyLoad" 	parameterType="int"  	resultMap="student_card_lazyLoad_map" >
+		<!-- 先查学生 -->
+		select * from student 
+	</select>
+	<resultMap type="student" id="student_card_lazyLoad_map">
+			<!-- 学生的信息 -->
+			<id  property="stuNo" column="stuNo"/>
+			<result property="stuName" column="stuName" />
+			<result property="stuAge" column="stuAge" />
+			<!-- 一对一时，对象成员使用 association映射;javaType指定该属性的类型
+				此次采用延迟加载：在查询学生时，并不立即加载 学生证信息
+			
+			-->
+			<!-- 学生证  ,通过select 在需要的时候再查学生证 -->
+			<association property="card" javaType="StudentCard"  select="org.lanqiao.mapper.StudentCardMapper.queryCardById"  column="cardid"  >
+				<!-- <id property="cardId" column="cardId"/>             
+					<result property="cardInfo" column="cardInfo"/>
+				 -->	
+			</association>
+	</resultMap>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

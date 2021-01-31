@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jlu.test2.PersonMapper">
+<!-- 
+1 mybatis sql语句不需要加;符号作为结尾，但是数据库里需要加
+2 对于java数据，严格区分大小写，数据库的数据不区分大小写
+ -->
+	<select id="queryPersonById" resultType="com.jlu.test1.Person"  parameterType="int">
+		select * from person where  id = #{id} 
+	</select>
+	<insert id="insertPerson" parameterType="com.jlu.test1.Person">
+			<!--insert into person(id,c1,c2) value(${id},'${c1}','${c2}')-->
+			insert into person(id,c1,c2,sex,classid,cardid)value(#{id},#{c1},#{c2},#{sex},#{classid},#{cardid})
+		<!-- insert into person(id,c1,c2) value(${id},${c1},${c2}):
+		 	insert into person(id,c1,c2) value(3,c1 str,s2 str2)
+		 	这样不对，数据库对字符串应该加入单引号
+		 	解决：
+		 		1 #{类的属性}   //自动加入单引号(这种对字符串自动加单引号的特点不会对其他的数据类型生效)
+		 		2 '${类的属性}' //手动添加单引号 (对于简单类型(八种数据类型和String)里面的括号里必须写的是value)
+		 					 //${类的属性}这种引用方式适用于模糊查询
+		  -->
+	</insert>
+	<delete id="deletePersonById" parameterType="int">
+		delete from person where id=${value}
+	</delete>
+	<update id="updatePersonById" parameterType="com.jlu.test1.Person">
+		update person set c1=#{c1},c2=#{c2},sex=#{sex} where id=#{id}
+	</update>
+	
+	<!--  接口编程 -->
+	<select id="selectPersonByIdWithConverter" parameterType="int" resultMap="personResult" >
+		select * from person where id=#{id}
+	</select>
+	<!--   这里的type使用全类名 -->
+	<resultMap type="com.jlu.test1.Person" id="personResult">
+		<id property="id" column="id"></id>
+		<result property="c1" column="c1"/>
+		<result property="c2" column="c2"/>
+		<result property="sex" column="sex" javaType="boolean" jdbcType="INTEGER"/>
+	</resultMap>
+	<update id="updatePersonByIdWithConveter" parameterType="com.jlu.test1.Person" >
+	<!-- 这里不指定也没问题    如updatePersonById  -->
+		update person set c1=#{c1},c2=#{c2},sex=#{sex ,javaType=boolean ,jdbcType=INTEGER} where id=#{id}
+	</update>
+	<!--  接口编程 加上输出参数 hashmap  result+hashMap -->
+	<select id="queryPersonByIdReturnHashMap" resultType="HashMap" parameterType="int">
+			select * from person where id=#{id};
+	</select>
+	<select id="queryPersonByIdReturnTable" resultType="HashMap">
+			select * from person
+	</select>
+	<!--  动态sql -->
+	<select id="queryPersonDynamic" parameterType="com.jlu.test1.Person" resultType="com.jlu.test1.Person">
+			select * from Person where 1=1
+			<if test="c1!=null"><!--  test内是一个bool表达式 如果结果为false则不执行 -->
+				and	c1=#{c1}
+			</if>
+			<if test="id!=0">
+				and	id=#{id}
+			</if>
+	</select>
+	
+</mapper>

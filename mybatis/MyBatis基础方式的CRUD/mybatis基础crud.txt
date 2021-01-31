@@ -1,0 +1,266 @@
+复习第一个MyBatis程序：
+0.mybatis.jar   ojdbc.jar
+1.conf.xml (数据库配置信息、映射文件)
+2.表-类：映射文件  mapper.xml
+3.测试
+
+
+mybatis约定：
+输入参数parameterType 和 输出参数resultType ，在形式上都只能有一个
+
+
+如果输入参数 ：是简单类型（8个基本类型+String） 是可以使用任何占位符,#{xxxx}
+	       如果是对象类型，则必须是对象的属性 #{属性名}
+
+输出参数：  如果返回值类型是一个 对象（如Student），则无论返回一个、还是多个，
+		再resultType都写成org.lanqiao.entity.Student
+		即 resultType="org.lanqiao.entity.Student"
+
+
+
+注意事项：
+如果使用的 事务方式为 jdbc,则需要 手工commit提交，即session.commit();
+
+
+我自己：
+1表名和类名一致
+2属性名和列名一致
+
+修改开发环境：两种方式：
+1 //可以通过build的第二参数 指定数据库环境
+	SqlSessionFactory sessionFacotry = new SqlSessionFactoryBuilder().build(reader,"development") ;
+2：<!-- 通过environments的default值 和  environment的 id 来指定 MyBatis运行时的数据库环境-->
+	<environments default="development">
+	还要在conf.xml 添加对应的环境
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<!-- 通过environments的default值 和  environment的 id 来指定 MyBatis运行时的数据库环境-->
+	<environments default="development">
+		<!-- 开发环境（自己的计算机） -->
+		<environment id="development">
+		
+		
+			<!-- 事务提交方式：
+				JDBC:利用JDBC方式处理事务（commit  rollback  close）
+				MANAGED：将事务交由 其他组件去托管（spring ,jobss）,默认 会关闭连接。
+			
+			<transactionManager type="MANAGED"/>
+				<property name="closeConnection" value="false"/>
+			 -->
+			   <transactionManager type="JDBC" />
+				<!-- 数据源类型：
+						UNPOOLED:传统的JDBC模式（每次访问数据库，均需要 打开、关闭等数据库操作，但是 打开、关闭数据库是比较消耗性能的）
+						POOLED：使用数据库连接池
+						JNDI：从tomcat中获取一个内置的数据库连接池 （数据库连接池-数据源  ）
+				 -->
+				 
+				<dataSource type="POOLED">
+				
+				
+					<!-- 配置数据库信息 -->
+					<property name="driver" value="oracle.jdbc.OracleDriver"/>
+					<property name="url" value="jdbc:oracle:thin:@127.0.0.1:1521:ORCL"/>
+					<property name="username" value="scott"/>
+					<property name="password" value="tiger"/>
+				</dataSource>
+		</environment>
+		
+		<!-- 真正的项目应该在   发布的那台计算机上运行 -->
+		<environment id="shishi">
+			<transactionManager type="JDBC"/>
+				<dataSource type="POOLED">
+				<!-- 配置数据库信息 -->
+				<property name="driver" value="oracle.jdbc.OracleDriver"/>
+				<property name="url" value="jdbc:oracle:thin:@192.168.1.183:1521:ORCL"/>
+				<property name="username" value="scott"/>
+				<property name="password" value="tiger"/>
+			</dataSource>
+		</environment>
+		
+		
+		<!--  -->
+		<environment id="test">
+			<transactionManager type="JDBC"/>
+				<dataSource type="POOLED">
+				<!-- 配置数据库信息 -->
+				<property name="driver" value="oracle.jdbc.OracleDriver"/>
+				<property name="url" value="jdbc:oracle:thin:@192.168.1.111:1521:ORCL"/>
+				<property name="username" value="scott"/>
+				<property name="password" value="tiger"/>
+			</dataSource>
+		</environment>
+	</environments>
+	
+	
+	
+	<mappers>
+		<!-- 加载映射文件 -->
+		<mapper resource="org/lanqiao/entity/studentMapper.xml"/>
+	</mappers>
+</configuration>
+
+studentMapper.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace:该mapper.xml映射文件的 唯一标识 -->
+<mapper namespace="org.lanqiao.entity.studentMapper">
+	<!--  后续通过  namespace.id-->
+	<!--parameterType:输入参数的类型
+	resultType：查询返回结果值的类型  ，返回类型  -->
+	<select id="queryStudentByStuno" parameterType="int"  resultType="org.lanqiao.entity.Student" >
+			select * from student where stuno = #{stuno}
+	</select>	
+	<insert id="addStudent" parameterType="org.lanqiao.entity.Student" >
+		insert into student(stuno,stuname,stuage,graname) values(#{stuNo},#{stuName},#{stuAge},#{graName}  ) 
+	</insert>
+	
+	<delete id="deleteStudentByStuno"  parameterType="int">
+		delete from student where stuno = #{stuno} 
+	</delete>
+	<!-- 参数类型是对象，引用的数据就是对象对应的属性-->
+	<update id="updateStudentByStuno" parameterType="org.lanqiao.entity.Student" >
+		update student set stuname=#{stuName} ,stuage=#{stuAge},graname=#{graName} where stuno=#{stuNo} 
+	</update>
+	如果返回值类型是一个 对象（如Student），则无论返回一个、还是多个，
+		再resultType都写成org.lanqiao.entity.Student
+		即 resultType="org.lanqiao.entity.Student"
+		
+		java代码：List<Student> students = session.selectList(statement) ;
+	<select id="queryAllStudents"  resultType="org.lanqiao.entity.Student" >
+		select * from student 
+	</select>
+</mapper>
+
+test。java
+package org.lanqiao.entity;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.util.List;
+
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+
+public class Test {
+	//查询单个学生
+	public static void queryStudentByStuno() throws IOException {
+		//Connection -  SqlSession操作MyBatis
+				//conf.xml - > reader
+				Reader reader = Resources.getResourceAsReader("conf.xml") ;
+				//reader  ->SqlSession
+				
+				//可以通过build的第二参数 指定数据库环境
+				SqlSessionFactory sessionFacotry = new SqlSessionFactoryBuilder().build(reader,"development") ;
+				SqlSession session = sessionFacotry.openSession() ;
+				String statement = "org.lanqiao.entity.studentMapper.queryStudentByStuno";
+				Student student = session.selectOne(statement,1) ;
+				System.out.println(student);
+				session.close();
+	}
+	
+	  //查询全部学生
+ 		public static void queryAllStudents() throws IOException {
+			//Connection -  SqlSession操作MyBatis
+					//conf.xml - > reader
+					Reader reader = Resources.getResourceAsReader("conf.xml") ;
+					//reader  ->SqlSession
+					//可以通过build的第二参数 指定数据库环境
+					SqlSessionFactory sessionFacotry = new SqlSessionFactoryBuilder().build(reader,"development") ;
+					SqlSession session = sessionFacotry.openSession() ;
+					
+					
+					
+					String statement = "org.lanqiao.entity.studentMapper."+"queryAllStudents";
+					List<Student> students = session.selectList(statement) ;
+					System.out.println(students);
+					session.close();
+		}
+		
+ 		
+ 		 //增加学生
+ 		public static void addStudent() throws IOException {
+ 			//Connection -  SqlSession操作MyBatis
+					//conf.xml - > reader
+					Reader reader = Resources.getResourceAsReader("conf.xml") ;
+					//reader  ->SqlSession
+					//可以通过build的第二参数 指定数据库环境
+					SqlSessionFactory sessionFacotry = new SqlSessionFactoryBuilder().build(reader,"development") ;
+					SqlSession session = sessionFacotry.openSession() ;
+					
+					String statement = "org.lanqiao.entity.studentMapper."+"addStudent";
+					Student student = new Student(3,"ww",25,"s1");
+					
+					
+					int count = session.insert(statement, student );//statement：指定执行的SQL    student：sql中需要的参数 （ ? ? ? ）
+					session.commit(); //提交事务
+					
+					System.out.println("增加"+count+"个学生");
+					session.close();
+		}
+ 		
+ 		
+ 		 //删除学生
+ 		public static void delteStudentByStuno() throws IOException {
+ 			//Connection -  SqlSession操作MyBatis
+					//conf.xml - > reader
+					Reader reader = Resources.getResourceAsReader("conf.xml") ;
+					//reader  ->SqlSession
+					//可以通过build的第二参数 指定数据库环境
+					SqlSessionFactory sessionFacotry = new SqlSessionFactoryBuilder().build(reader,"development") ;
+					SqlSession session = sessionFacotry.openSession() ;
+					
+					String statement = "org.lanqiao.entity.studentMapper."+"deleteStudentByStuno";
+					
+					int count = session.delete(statement,3) ;
+					
+					session.commit(); //提交事务
+					
+					System.out.println("删除"+count+"个学生");
+					session.close();
+		}
+	
+ 		 //修改学生
+ 		public static void updateStudentByStuno() throws IOException {
+ 			//Connection -  SqlSession操作MyBatis
+					//conf.xml - > reader
+					Reader reader = Resources.getResourceAsReader("conf.xml") ;
+					//reader  ->SqlSession
+					//可以通过build的第二参数 指定数据库环境
+					SqlSessionFactory sessionFacotry = new SqlSessionFactoryBuilder().build(reader,"development") ;
+					SqlSession session = sessionFacotry.openSession() ;
+					
+					String statement = "org.lanqiao.entity.studentMapper."+"updateStudentByStuno";
+					//修改的参数
+					Student student = new Student();
+					//修改哪个人，where stuno =2 
+					student.setStuNo(2);
+					//修改成什么样子？
+					student.setStuName("lxs");
+					student.setStuAge(44);
+					student.setGraName("s2");
+					//执行
+					int count = session.update(statement,student) ;
+					
+					session.commit(); //提交事务
+					
+					System.out.println("修改"+count+"个学生");
+					session.close();
+		}
+	
+	
+	public static void main(String[] args) throws IOException {
+		queryAllStudents();
+//		 addStudent() ;
+//		delteStudentByStuno();
+		updateStudentByStuno();
+		queryAllStudents();
+	}
+}

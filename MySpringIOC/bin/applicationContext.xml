@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+	<!--  使用set方法注入 -->
+	<context:component-scan base-package="com.jlu.test2"></context:component-scan>
+	<bean id="bean1" class="com.jlu.test1.Bean1">
+		<property name="a1" value=" 1"></property>
+		<property name="str1" value="str1"></property>
+	</bean>
+	<bean id="bean2" class="com.jlu.test1.Bean2">
+		<property name="a2" value="2"/>
+		<property name="str2" value="str2"></property>
+		<property name="bean1" ref="bean1"/>
+		
+	</bean>
+	<!-- 使用构造器注入 -->
+	<bean id="bean3" class="com.jlu.test1.Bean3">
+		<constructor-arg value="3"></constructor-arg>
+		<constructor-arg value="str3"></constructor-arg>
+		<constructor-arg ref="bean2"></constructor-arg>
+	</bean>
+	<!--  使用命名空间注入 -->
+	<bean id="bean4" class="com.jlu.test1.Bean4" p:bean1-ref="bean1" p:a4="4" p:str4="str4"></bean>
+	<!--  测试给字符串赋予空字符和类对象null -->
+	<bean id="bean5" class="com.jlu.test1.Bean5">
+		<property name="a5" value="5"></property>
+		<property name="str5" value="str5"></property>
+		<property name="strnull"><null/></property>
+		<property name="bean4"><null/></property>
+	</bean>
+	<!--集合类的装配测试   -->
+	<bean id="bean6" class="com.jlu.test1.Bean6">
+		<property name="intArray">
+			<array>
+				<value>1</value>
+				<value>2</value>
+				<value>3</value>
+				<value>4</value>
+			</array>
+		</property>
+		<property name="strArray">
+			<array>
+				<value>str1</value>
+				<value>str2</value>
+				<value>str3</value>
+				<value>str4</value>
+			</array>
+		</property>
+		<property name="strList">
+			<list>
+				<value>list1</value>
+				<value>list2</value>
+			</list>
+		</property>
+		<property name="hashMap">
+			<map>
+				<entry>
+					<key>
+						<value>map</value>
+					</key>
+					<value>hashMap</value>
+				</entry>
+				<entry>
+					<key>
+						<value>hi</value>
+					</key>
+					<value>hello</value>
+				</entry>
+			</map>
+		</property>
+	
+	</bean>
+	<!--  自动装配测试 -->
+	<bean id="bean7" class="com.jlu.test1.Bean7" autowire="byName"	>
+		<property name="a7" value="7"></property>
+		
+	</bean>
+</beans>

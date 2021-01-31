@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jlu.test2.MyClassMapper">
+	<select id="selectPersonByClass"  resultMap="map1" resultType="HashMap">
+		select * from myclass,person where person.classid=myclass.classid
+	</select>
+	<resultMap type="com.jlu.test1.MyClass" id="map1">
+		<id property="classId" column="classid"/>
+		<result property="classInfo" column="classinfo"/>
+		<collection property="personList" ofType="com.jlu.test1.Person">
+			<id property="id" column="id"/>
+			<result property="c1" column="c1"/>
+			<result property="c2" column="c2"/>
+			<result property="sex" column="sex"/>
+			<result property="classid" column="classid"/>
+			<result property="cardid" column="cardid"/>
+		</collection>
+	</resultMap>
+
+</mapper>
